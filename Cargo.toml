@@ -1,0 +1,11 @@
+[package]
+name = "mind_agents"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+chrono = "0.4"
+ollama-rs = {version = "0.3.1", features = ["stream"]}
+rand = "0.9.1"
+futures-util = "0.3"
