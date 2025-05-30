@@ -50,13 +50,16 @@ async fn main() -> io::Result<()> {
 
         // Get current conversation context
         let conversation_history = runner.get_conversation_summary();
-        let prompt = format!(
-            "Current conversation context:\n{}\n\nUser prompt: {}\n\n",
-            conversation_history, input
-        );
+
         //create a loop that continues to iterate over the number of background agents in the
         let max_iterations = background_agents.len();
         for i in 0..max_iterations {
+            let agent = background_agents[i].clone();
+            let prompt = format!(
+            "Current conversation context:\n{}\n\nUser prompt: {}\n\nCurrent agent prompt:{}\n\n",
+            
+            conversation_history, input,agent.agent_prompt
+            );
             match runner.process_single_turn(i, &prompt).await {
                 Ok(_) => println!(
                     "\nAgent {} processed successfully.\n",
