@@ -34,11 +34,6 @@ impl TranscriptManager {
         println!("Transcript saved to {}", file_path.display());
         Ok(file_path)
     }
-
-    pub fn get_transcript_path(&self, timestamp: &str) -> PathBuf {
-        self.output_dir
-            .join(format!("conversation_{}.txt", timestamp))
-    }
 }
 
 #[cfg(test)]

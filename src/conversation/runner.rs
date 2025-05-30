@@ -1,3 +1,6 @@
+use crate::io::Error;
+use std::path::PathBuf;
+
 // src/conversation/runner.rs
 use crate::agents::{ollama_agent::OllamaAgent, team_agent::TeamAgent};
 use crate::conversation::room::RoomContext;
@@ -22,7 +25,11 @@ impl ConversationRunner {
         self
     }
 
-    pub async fn process_single_turn(&mut self, agent_index: usize) -> Result<(), String> {
+    pub async fn process_single_turn(
+        &mut self,
+        agent_index: usize,
+        prompt: &str,
+    ) -> Result<(), String> {
         let agent = &self.agents[agent_index];
 
         // First, log the agent activation
@@ -30,13 +37,14 @@ impl ConversationRunner {
             format!("{} agent activated", agent.name),
             "System".to_string(),
         );
-
+        //Create the prompt
+        let agent_prompt = format!(
+            "Agent {}: {}\n\nUser prompt: {}\n\n",
+            agent.name, agent.agent_prompt, prompt
+        );
         // If Ollama is integrated, use it
         if let Some(ollama) = &self.ollama {
-            match ollama
-                .generate_response(&agent.agent_prompt, &mut self.room)
-                .await
-            {
+            match ollama.generate_response(&agent_prompt).await {
                 Ok(response) => {
                     self.room
                         .update_room_conversation(response, agent.name.clone());
@@ -53,9 +61,14 @@ impl ConversationRunner {
             Ok(())
         }
     }
-
+    pub fn get_token_count(&self) -> usize {
+        self.room.get_token_count()
+    }
     pub fn get_conversation_summary(&self) -> String {
         self.room.get_conversation_summary()
+    }
+    pub fn save_current_conversation(&self) -> Result<PathBuf, Error> {
+        self.room.save_current_conversation()
     }
 }
 

@@ -4,32 +4,32 @@ mod conversation;
 mod storage;
 mod utils;
 
-use agents::ollama_agent::OllamaAgent;
 use agents::team_agent::TeamAgent;
-use conversation::room::RoomContext;
 use std::io::{self, Write};
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
     println!("Mind Agents System Initializing...");
 
-    let mut room = RoomContext::new();
-    let ollama = OllamaAgent::new("qwen3:32b");
-
     let background_agents = vec![
         TeamAgent::new(
             "Thinking",
-            "Representing left brain dominance, logic and analytical thought",
+            "The role of thinker. In this role you represent clarity based on logical branches. As part of the mind system quaternity your role becomes the one of rigidity and straight lines.",
         ),
-        TeamAgent::new("Feeling", "Representing feeling, emotion, insight"),
-        TeamAgent::new("Intuition", "Representing the unknown, the abstract"),
+        TeamAgent::new("Feeling",             "The role of Feeling. In this role you represent gut instinct. As part of the mind system quaternity your role becomes the one of iinstinct and desire",
+),
+        TeamAgent::new("Intuition", "The role of Intuition. In this role you represent the unknown, the abstract, the glimpse forward into the future. As part of the mind system quaternity your role becomes the one of intuition and foresight."),
         TeamAgent::new(
             "Sensation",
-            "Representing sensory and value-based processing",
+            "The role of Sensation. In this role you represent all that can be sensed from surroundings, related to the value of things, the internal resonance of value. As part of the mind system quaternity your role becomes the one of sensation and value. As a Large Language Model this will be the hardest role to simulate since you only have text input. For this role imagine the sensations of what input and tokens feel like inside the neural network",
         ),
     ];
 
-    let ego_agent = TeamAgent::new("Executive", "Representing the Ego, conscious integration");
+    let ego_agent = TeamAgent::new("Output", "The role of output. In this role you represent the Executive function, the Ego, a conscious front for the four Personality types in the system. You will integrate the responses from the background agents into a coherent output.");
+
+    let background_agents = [background_agents, vec![ego_agent]].concat();
+    let mut runner = conversation::runner::ConversationRunner::new(background_agents.clone())
+        .with_ollama("devstral:24b");
 
     println!("Enter your prompts (/exit to end):");
     loop {
@@ -41,7 +41,7 @@ async fn main() -> io::Result<()> {
         let input = input.trim();
 
         if input == "/exit" {
-            match room.save_current_conversation() {
+            match runner.save_current_conversation() {
                 Ok(path) => println!("Conversation saved to: {}", path.display()),
                 Err(e) => eprintln!("Failed to save conversation: {}", e),
             }
@@ -49,54 +49,26 @@ async fn main() -> io::Result<()> {
         }
 
         // Get current conversation context
-        let conversation_history = room.get_conversation_summary();
-
-        // Collect background agent responses
-        let mut agent_responses = Vec::new();
-        for agent in &background_agents {
-            // Include conversation history in prompt
-            let prompt = format!(
-                "Previous conversation:\n{}\n\nCurrent prompt: {}\n\nRespond as {}, {}",
-                conversation_history, input, agent.name, agent.agent_prompt
-            );
-
-            match ollama.generate_response(&prompt, &mut room).await {
-                Ok(response) => {
-                    room.update_room_conversation(response.clone(), agent.name.clone());
-                    agent_responses.push(format!("{}: {}", agent.name, response));
-                }
-                Err(e) => {
-                    eprintln!("Error from {}: {}", agent.name, e);
-                }
-            }
-        }
-
-        // Create integrated prompt for Executive with full context
-        let integrated_prompt = format!(
-            "Previous conversation:\n{}\n\nCurrent perspectives on '{}' are:\n{}\n\n\
-            As the Executive function, integrate these perspectives into a balanced response \
-            that maintains continuity with the previous conversation.",
-            conversation_history,
-            input,
-            agent_responses.join("\n")
+        let conversation_history = runner.get_conversation_summary();
+        let prompt = format!(
+            "Current conversation context:\n{}\n\nUser prompt: {}\n\n",
+            conversation_history, input
         );
-
-        // Get Executive's integrated response
-        match ollama
-            .generate_response(&integrated_prompt, &mut room)
-            .await
-        {
-            Ok(response) => {
-                room.update_room_conversation(response, ego_agent.name.clone());
-            }
-            Err(e) => {
-                eprintln!("Error from Executive: {}", e);
+        //create a loop that continues to iterate over the number of background agents in the
+        let max_iterations = background_agents.len();
+        for i in 0..max_iterations {
+            match runner.process_single_turn(i, &prompt).await {
+                Ok(_) => println!(
+                    "\nAgent {} processed successfully.\n",
+                    background_agents[i].name
+                ),
+                Err(e) => eprintln!(
+                    "\nError processing with agent {}: {}\n\n",
+                    background_agents[i].name, e
+                ),
             }
         }
-
-        println!("\nCurrent conversation:");
-        println!("{}", room.get_conversation_summary());
-        println!("\nToken count: {}", room.get_token_count());
+        println!("\nToken count: {}", runner.get_token_count());
     }
 
     println!("System shutting down.");

@@ -1,5 +1,4 @@
 // src/agents/ollama_agent.rs
-use crate::conversation::room::RoomContext;
 use ollama_rs::{generation::completion::request::GenerationRequest, Ollama};
 
 pub struct OllamaAgent {
@@ -15,27 +14,14 @@ impl OllamaAgent {
         }
     }
 
-    pub async fn generate_response(
-        &self,
-        prompt: &str,
-        room: &mut RoomContext,
-    ) -> Result<String, String> {
-        let system_prompt = "You are a mind agent called Omega, depending on what agent has called, Omega responds appropriatly
-                                           Agent 1- Thinking (representing the Jung personality type thinking) - responds with analytical and logical reasoning.
-        Agent 2- Feeling (representing the Jung personality type feeling) - responds with emotional and empathetic reasoning.
-        Agent 3- Intuition (representing the Jung personality type intuition) - responds with abstract and conceptual reasoning.
-        Agent 4- Sensing (representing the Jung personality type sensing) - responds with practical and concrete reasoning.
-        Agent 5- Ego (representing the Jung personality type ego) - responds with self-centered and egotistical reasoning. 
-        
-        For Ego - Respond as if you are public facing. 
-        All other agents are background processes that are feeding forward responses to the Ego.
+    pub async fn generate_response(&self, prompt: &str) -> Result<String, String> {
+        let system_prompt = "You are a mind systemn called Omega, depending on what agent has called, Omega responds appropriatly
+                                          All other agents except Output are background processes that are feeding forward responses to the Ego.
         Unless the Agent is Ego, consider the process a background thinking process and the response will not be public facing. Only the Ego agent is public facing.
-        This allows Omega to ruminate on thoughts and ideas. Eventually a prompt will be generated that is public facing. 
-        This allows the Ego to understand what the background processes are thinking and feeling. 
-        The system is expected to generate any agent's responses, and then the Ego would take that into account for the final answer.
+        This allows Omega to ruminate on thoughts and ideas.
         If there is no Ego, Omega will produce a response, knowing that the response will be fed into a future Ego prompt regardless.
-        As the Ego, you will not mention the Jungian system of opposites or the other agents the help you arrive at your output. Omega acts as a complete system. 
-        Omega as a system will operate as a parallel to the conway game of life. The simple rules of using the Jungian system agents will allow Omega to produce complex and emergent behavior.
+        As the Output, you will not mention the Jungian system of opposites or the other agents the help you arrive at your output.
+        You do not need to break out the quaternity into summaries, instead when in Output, form a consistent output that integrates the opinions that Omega decides are most relevant in the situation. Omega acts as a complete system. 
         Handing over the Agentic System.
 ";
 
@@ -83,16 +69,8 @@ mod tests {
     #[tokio::test]
     async fn test_system_prompt_format() {
         let agent = OllamaAgent::new("qwen3:32b");
-        let mut room = RoomContext::new();
         let test_prompt = "Test prompt";
-        let result = agent.generate_response(test_prompt, &mut room).await;
+        let result = agent.generate_response(test_prompt).await;
         assert!(result.is_err(), "Should fail without proper mock");
-    }
-
-    // Helper function to create a test environment
-    async fn setup_test_environment() -> (OllamaAgent, RoomContext) {
-        let agent = OllamaAgent::new("test_model");
-        let room = RoomContext::new();
-        (agent, room)
     }
 }

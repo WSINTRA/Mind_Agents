@@ -15,7 +15,7 @@ impl RoomContext {
     pub fn new() -> Self {
         RoomContext {
             messages: Vec::new(),
-            token_counter: TokenCounter::new(32768), // Qwen's context length
+            token_counter: TokenCounter::new(32768), // Set token limit to 32k
             total_tokens: 0,
         }
     }
@@ -45,7 +45,6 @@ impl RoomContext {
             }
         }
 
-        println!("\n{}: {}\n\n", author, content);
         let new_tokens = self.token_counter.estimate_tokens(&content);
         self.total_tokens += new_tokens;
 
@@ -58,7 +57,7 @@ impl RoomContext {
 
     // Existing methods remain the same
     pub fn read(&self) -> Vec<&Message> {
-        self.messages.iter().filter(|m| m.is_valid).collect()
+        self.messages.iter().collect()
     }
 
     pub fn get_conversation_summary(&self) -> String {
@@ -93,7 +92,6 @@ mod tests {
         assert!(room.get_token_count() < 32768);
     }
 
-    // Existing tests remain the same
     #[test]
     fn test_room_creation() {
         let room = RoomContext::new();
